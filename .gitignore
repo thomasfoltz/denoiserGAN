@@ -1,3 +1,4 @@
 data/*
-images/*
+testImages/*
+__pycache__/*
 denoiser.pth

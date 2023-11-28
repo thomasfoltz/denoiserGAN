@@ -1,9 +1,5 @@
-import datetime
-import numpy as np
-import os
-import torch
+import datetime, os, torch, torchvision
 import torch.nn as nn
-import torchvision
 from model import UNET
 from PIL import Image
 from torch.utils.data import DataLoader
@@ -37,7 +33,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 noisyTrainedData = DataLoader(noisyTrainDataEMNIST, batch_size=batch_size, shuffle=True)
 
 for epoch in range(num_epochs):
-    print(f"Iteration {i}: {datetime.datetime.now()}")
+    print(f"Iteration {epoch}: {datetime.datetime.now()}")
     model.train()
     running_loss = 0.0
     for noisy_imgs, original_imgs in noisyTrainedData:
