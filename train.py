@@ -1,6 +1,7 @@
 import datetime, os, torch, torchvision
 import torch.nn as nn
 from model import UNET
+from model import Discriminator
 from PIL import Image
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
@@ -26,23 +27,38 @@ transform = transforms.Compose([transforms.ToTensor(),])
 trainDataEMNIST = torchvision.datasets.EMNIST(root='./data', split='balanced', train=True, download=False, transform=transform)
 noisyTrainDataEMNIST = NoisyEMNIST(trainDataEMNIST, gaussianNoise)
 
-model = UNET()
 num_epochs, batch_size = 10, 32
-criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 noisyTrainedData = DataLoader(noisyTrainDataEMNIST, batch_size=batch_size, shuffle=True)
 
-for epoch in range(num_epochs):
-    print(f"Iteration {epoch}: {datetime.datetime.now()}")
-    model.train()
-    running_loss = 0.0
-    for noisy_imgs, original_imgs in noisyTrainedData:
-        optimizer.zero_grad()
-        outputs = model(noisy_imgs)
-        loss = criterion(outputs, original_imgs)
-        loss.backward()
-        optimizer.step()
-        running_loss += loss.item()
-    print(f"Epoch [{epoch+1}/{num_epochs}], Loss: {running_loss/len(noisyTrainedData)}")
+generator = UNET()
+discriminator = Discriminator()
+optimizer_G = torch.optim.Adam(generator.parameters(), lr=0.001)  # For generator
+optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=0.001)  # For discriminator
+adversarial_loss = torch.nn.BCELoss()
 
-torch.save(model.state_dict(), './denoiser.pth')
+for epoch in range(num_epochs):
+    for i, (noisy_imgs, original_imgs) in enumerate(noisyTrainedData):
+        valid = torch.ones((noisy_imgs.size(0), 1), requires_grad=False)
+        fake = torch.zeros((noisy_imgs.size(0), 1), requires_grad=False)
+
+        optimizer_G.zero_grad()
+
+        gen_imgs = generator(noisy_imgs)
+        g_loss = adversarial_loss(discriminator(gen_imgs), valid)
+
+        g_loss.backward()
+        optimizer_G.step()
+
+        optimizer_D.zero_grad()
+
+        real_loss = adversarial_loss(discriminator(original_imgs), valid)
+        fake_loss = adversarial_loss(discriminator(gen_imgs.detach()), fake)
+        d_loss = (real_loss + fake_loss) / 2
+
+        d_loss.backward()
+        optimizer_D.step()
+
+        print(f"[Epoch {epoch}/{num_epochs}] [Batch {i}/{len(noisyTrainedData)}] [D loss: {d_loss.item()}] [G loss: {g_loss.item()}]")
+
+torch.save(generator.state_dict(), './generator.pth')
+torch.save(discriminator.state_dict(), './discriminator.pth')

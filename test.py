@@ -1,5 +1,6 @@
 import datetime, os, torch, torchvision
 from model import UNET
+from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
 
@@ -30,12 +31,22 @@ toPIL = transforms.ToPILImage()
 
 if not os.path.exists('testImages/'): os.makedirs('testImages/')
 for i in range(10):
-    print(f"Image {i}: {datetime.datetime.now()}")
     img = toPIL(testDataEMNIST.data[i])
     img.save(f'testImages/image_{i}.png')
-    img = toPIL(noisyTestDataEMNIST[i][0])
-    img.save(f'testImages/image_{i}_noisy.png')
-    image_tensor = noisyTestDataEMNIST[i][0].unsqueeze(0)
-    output = model(image_tensor)
-    img = toPIL(output.squeeze())
-    img.save(f'testImages/image_{i}_reconstructed.png')
+    noisyImg = toPIL(noisyTestDataEMNIST[i][0])
+    noisyImg.save(f'testImages/image_{i}_noisy.png')
+    input_tensor = noisyTestDataEMNIST[i][0].unsqueeze(0)
+    output = model(input_tensor)
+    reconstructedImg = toPIL(output.squeeze())
+
+    combinedImages = [img, noisyImg, reconstructedImg]
+    combinedPath = f'testImages/image_{i}_gan.png'
+
+    total_width = sum(image.width for image in combinedImages)
+    max_height = max(image.height for image in combinedImages)
+    collage = Image.new('RGB', (total_width, max_height))
+    x_offset = 0
+    for image in combinedImages:
+        collage.paste(image, (x_offset, 0))
+        x_offset += image.width
+    collage.save(combinedPath)
