@@ -1,7 +1,6 @@
-import datetime, os, torch, torchvision
+import os, torch, torchvision
 import torch.nn as nn
-from model import UNET
-from model import Discriminator
+from model import UNET, Discriminator
 from PIL import Image
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
@@ -32,9 +31,12 @@ noisyTrainedData = DataLoader(noisyTrainDataEMNIST, batch_size=batch_size, shuff
 
 generator = UNET()
 discriminator = Discriminator()
-optimizer_G = torch.optim.Adam(generator.parameters(), lr=0.001)  # For generator
-optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=0.001)  # For discriminator
+optimizer_G = torch.optim.Adam(generator.parameters(), lr=0.001)
+optimizer_D = torch.optim.Adam(discriminator.parameters(), lr=0.001)
 adversarial_loss = torch.nn.BCELoss()
+
+l1_loss = nn.L1Loss()
+
 
 for epoch in range(num_epochs):
     for i, (noisy_imgs, original_imgs) in enumerate(noisyTrainedData):
@@ -44,7 +46,11 @@ for epoch in range(num_epochs):
         optimizer_G.zero_grad()
 
         gen_imgs = generator(noisy_imgs)
-        g_loss = adversarial_loss(discriminator(gen_imgs), valid)
+        g_adv_loss  = adversarial_loss(discriminator(gen_imgs), valid)
+
+        g_l1_loss = l1_loss(gen_imgs, original_imgs)
+
+        g_loss = g_adv_loss + g_l1_loss
 
         g_loss.backward()
         optimizer_G.step()
@@ -58,7 +64,7 @@ for epoch in range(num_epochs):
         d_loss.backward()
         optimizer_D.step()
 
-        print(f"[Epoch {epoch}/{num_epochs}] [Batch {i}/{len(noisyTrainedData)}] [D loss: {d_loss.item()}] [G loss: {g_loss.item()}]")
+        print(f"[Epoch {epoch+1}/{num_epochs}] [Batch {i}/{len(noisyTrainedData)}] [D loss: {d_loss.item()}] [G loss: {g_loss.item()}]")
 
 torch.save(generator.state_dict(), './generator.pth')
 torch.save(discriminator.state_dict(), './discriminator.pth')

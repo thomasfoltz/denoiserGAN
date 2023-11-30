@@ -1,4 +1,5 @@
 data/*
-testImages/*
+results/*
 __pycache__/*
-denoiser.pth
+discriminator.pth
+generator.pth

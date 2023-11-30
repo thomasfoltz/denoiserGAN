@@ -1,5 +1,5 @@
 import datetime, os, torch, torchvision
-from model import UNET
+from model import UNET, Discriminator
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision import transforms
@@ -20,27 +20,32 @@ class NoisyEMNIST(Dataset):
         noisy_image = self.noiseFunction(image)
         return noisy_image, image
 
-model = UNET()
-model.load_state_dict(torch.load('./denoiser.pth'))
-model.eval()
+generator = UNET()
+generator.load_state_dict(torch.load('./generator.pth'))
+generator.eval()
+
+discriminator = Discriminator()
+discriminator.load_state_dict(torch.load('./discriminator.pth'))
+discriminator.eval()
 
 transform = transforms.Compose([transforms.ToTensor(),])
 testDataEMNIST = torchvision.datasets.EMNIST(root='./data', split='balanced', train=False, download=False, transform=transform)
 noisyTestDataEMNIST = NoisyEMNIST(testDataEMNIST, gaussianNoise)
 toPIL = transforms.ToPILImage()
 
-if not os.path.exists('testImages/'): os.makedirs('testImages/')
-for i in range(10):
+if not os.path.exists('results/'): os.makedirs('results/')
+for i in range(20):
     img = toPIL(testDataEMNIST.data[i])
-    img.save(f'testImages/image_{i}.png')
+    img.save(f'results/image_{i+1}.png')
     noisyImg = toPIL(noisyTestDataEMNIST[i][0])
-    noisyImg.save(f'testImages/image_{i}_noisy.png')
+    noisyImg.save(f'results/image_{i+1}_noisy.png')
     input_tensor = noisyTestDataEMNIST[i][0].unsqueeze(0)
-    output = model(input_tensor)
+    output = generator(input_tensor)
     reconstructedImg = toPIL(output.squeeze())
+    print(f'image_{i+1} GAN conf: {round(discriminator(output).item()*100, 2)}%')
 
     combinedImages = [img, noisyImg, reconstructedImg]
-    combinedPath = f'testImages/image_{i}_gan.png'
+    combinedPath = f'results/image_{i+1}_gan.png'
 
     total_width = sum(image.width for image in combinedImages)
     max_height = max(image.height for image in combinedImages)
