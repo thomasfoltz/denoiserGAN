@@ -38,7 +38,7 @@ def weinerFilter(image):
     return Image.fromarray(filtered_image.astype(np.uint8))
 
 discriminator = Discriminator()
-discriminator.load_state_dict(torch.load('./discriminator.pth'))
+discriminator.load_state_dict(torch.load('./discriminatorv2.pth'))
 discriminator.eval()
 
 transform = transforms.Compose([transforms.ToTensor()])
