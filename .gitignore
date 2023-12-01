@@ -2,4 +2,8 @@ data/*
 results/*
 __pycache__/*
 discriminator.pth
+discriminatorv2.pth
+discriminatorv3.pth
 generator.pth
+generatorv2.pth
+generatorv3.pth

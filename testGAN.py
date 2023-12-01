@@ -21,11 +21,11 @@ class NoisyEMNIST(Dataset):
         return noisy_image, image
 
 generator = UNET()
-generator.load_state_dict(torch.load('./generator.pth'))
+generator.load_state_dict(torch.load('./generatorv2.pth'))
 generator.eval()
 
 discriminator = Discriminator()
-discriminator.load_state_dict(torch.load('./discriminator.pth'))
+discriminator.load_state_dict(torch.load('./discriminatorv2.pth'))
 discriminator.eval()
 
 transform = transforms.Compose([transforms.ToTensor(),])
@@ -33,16 +33,21 @@ testDataEMNIST = torchvision.datasets.EMNIST(root='./data', split='balanced', tr
 noisyTestDataEMNIST = NoisyEMNIST(testDataEMNIST, gaussianNoise)
 toPIL = transforms.ToPILImage()
 
+# avgConf = 0
 if not os.path.exists('results/'): os.makedirs('results/')
 for i in range(20):
     img = toPIL(testDataEMNIST.data[i])
     img.save(f'results/image_{i+1}.png')
     noisyImg = toPIL(noisyTestDataEMNIST[i][0])
     noisyImg.save(f'results/image_{i+1}_noisy.png')
+
     input_tensor = noisyTestDataEMNIST[i][0].unsqueeze(0)
     output = generator(input_tensor)
     reconstructedImg = toPIL(output.squeeze())
+    
     print(f'image_{i+1} GAN conf: {round(discriminator(output).item()*100, 2)}%')
+
+    # avgConf+=discriminator(output).item()
 
     combinedImages = [img, noisyImg, reconstructedImg]
     combinedPath = f'results/image_{i+1}_gan.png'
@@ -55,3 +60,5 @@ for i in range(20):
         collage.paste(image, (x_offset, 0))
         x_offset += image.width
     collage.save(combinedPath)
+
+# print(f'Average Confidence in Reconstruction:{round(avgConf/len(testDataEMNIST)*100, 2)}%')
